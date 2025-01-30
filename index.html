@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft-Like Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #inventory { position: fixed; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/OrbitControls.min.js"></script>
+
+<script>
+// Basic setup
+let scene, camera, renderer, controls;
+let blocks = [];
+let blockSize = 1;
+
+// Create a basic scene
+scene = new THREE.Scene();
+camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Add controls for camera movement
+controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.25;
+controls.screenSpacePanning = false;
+
+// Lighting
+let light = new THREE.AmbientLight(0x404040); // Ambient light
+scene.add(light);
+
+let directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 5, 5);
+scene.add(directionalLight);
+
+// Set camera position
+camera.position.set(0, 5, 10);
+
+// World generation (random terrain)
+function generateWorld() {
+    for (let x = -10; x < 10; x++) {
+        for (let z = -10; z < 10; z++) {
+            let height = Math.floor(Math.random() * 3);
+            for (let y = 0; y < height; y++) {
+                let block = createBlock(x, y, z);
+                scene.add(block);
+                blocks.push(block);
+            }
+        }
+    }
+}
+
+// Create a block
+function createBlock(x, y, z) {
+    let geometry = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+    let material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+    let block = new THREE.Mesh(geometry, material);
+    block.position.set(x, y, z);
+    return block;
+}
+
+// Event listener for mouse clicks
+let selectedBlock = null;
+window.addEventListener('click', function(event) {
+    let mouse = new THREE.Vector2(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        - (event.clientY / window.innerHeight) * 2 + 1
+    );
+
+    let raycaster = new THREE.Raycaster();
+    raycaster.updateMatrixWorld();
+    raycaster.setFromCamera(mouse, camera);
+
+    let intersects = raycaster.intersectObjects(blocks);
+    if (intersects.length > 0) {
+        selectedBlock = intersects[0].object;
+        scene.remove(selectedBlock); // Remove the selected block
+        blocks = blocks.filter(block => block !== selectedBlock); // Remove from array
+    }
+});
+
+// Inventory UI (basic)
+let inventory = {
+    wood: 0,
+    stone: 0,
+    iron: 0,
+};
+function updateInventoryDisplay() {
+    let inventoryDisplay = document.getElementById("inventory");
+    inventoryDisplay.innerHTML = `
+        Wood: ${inventory.wood}<br>
+        Stone: ${inventory.stone}<br>
+        Iron: ${inventory.iron}<br>
+    `;
+}
+setInterval(updateInventoryDisplay, 100);
+
+// Simple crafting system
+function craftItem() {
+    if (inventory.wood >= 2 && inventory.stone >= 2) {
+        inventory.wood -= 2;
+        inventory.stone -= 2;
+        console.log("Crafted a tool!");
+    }
+}
+
+// World setup
+generateWorld();
+
+// Render loop
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+
+// Resize handler
+window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
+<!-- Inventory Display -->
+<div id="inventory"></div>
+
+</body>
+</html>
